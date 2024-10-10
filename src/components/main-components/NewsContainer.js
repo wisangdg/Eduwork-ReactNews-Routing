@@ -9,58 +9,46 @@ export default function NewsContainer({ query, apiKey }) {
   const { category } = useParams();
 
   useEffect(() => {
-    const controller = new AbortController();
-
     const fetchNews = async () => {
-      console.log(
-        "fetchNews called with query:",
-        query,
-        "and category:",
-        category
-      );
-
       try {
         setLoading(true);
         setError("");
-        const currentCategory = category || "general";
-        const response = await fetch(
-          query === ""
-            ? `https://newsapi.org/v2/top-headlines?category=${currentCategory}&country=us&apiKey=${apiKey}`
-            : `https://newsapi.org/v2/everything?q=${encodeURIComponent(
-                query
-              )}&apiKey=${apiKey}`,
-          { signal: controller.signal }
-        );
+
+        const response = await fetch("/db.json");
 
         if (!response.ok) {
-          throw new Error(`Error fetching news: ${response.statusText}`);
+          throw new Error(`Error mengambil berita: ${response.statusText}`);
         }
 
         const data = await response.json();
-        console.log("checking for data:", data);
+        console.log("memeriksa data:", data);
 
         if (data.articles) {
-          setNews(data.articles);
+          const filteredArticles = query
+            ? data.articles.filter(
+                (article) =>
+                  article.title.toLowerCase().includes(query.toLowerCase()) ||
+                  article.description
+                    .toLowerCase()
+                    .includes(query.toLowerCase())
+              )
+            : data.articles;
+
+          setNews(filteredArticles);
         } else {
-          setError(data.message || "Error fetching news");
+          setError("Tidak ada artikel yang ditemukan");
           setNews([]);
         }
       } catch (error) {
-        if (error.name !== "AbortError") {
-          console.log("Error occurred:", error);
-          setError(error.message || "Error fetching news");
-        }
+        console.log("Terjadi kesalahan:", error);
+        setError(error.message || "Error mengambil berita");
       } finally {
         setLoading(false);
       }
     };
 
     fetchNews();
-
-    return () => {
-      controller.abort();
-    };
-  }, [query, category, apiKey]);
+  }, [query, category]);
 
   if (loading)
     return (
